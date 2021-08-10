@@ -43,13 +43,13 @@ namespace Image_Compression.Controllers
                 tasks.Add(t);
             }
 
-         /*   byte[] fileBytes = System.Convert.FromBase64String(imageobj.imageByteArray);
+            byte[] fileBytes = System.Convert.FromBase64String(imageobj.imageByteArray);
 
             Task task = Task.Run(() =>
             {
                 compressedBytes = imageCompresser.compress(fileBytes, imageobj.watermarkpath).Result;
             });
-            tasks.Add(task);*/
+            tasks.Add(task);
             Task.WaitAll(tasks.ToArray());
             //return Ok("images compressed"); ;
             return Ok(new { compressedBytes = compressedBytes }); ;

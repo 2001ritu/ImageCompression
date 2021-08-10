@@ -14,6 +14,7 @@ namespace Image_Compression.Services
     {
 
         //for single image
+        //working watermarks
         public async Task<byte[]> compress(string path)
         {
             byte[] originalBytes = null;
@@ -39,6 +40,7 @@ namespace Image_Compression.Services
         }
 
         //For multiple image
+        string fileName = "";
             public async Task<byte[]> compress(string path, string watermarkpath)
             {
                 byte[] originalBytes = null;
@@ -47,17 +49,17 @@ namespace Image_Compression.Services
                 {
                     //  count++;
                     originalBytes = getImageBytes(path);
-                    string fileName = Path.GetFileName(path);
+                     fileName = Path.GetFileName(path);
 
                     String writePath = "C:\\Users\\richa\\Pictures\\Vips-compress\\" + fileName;
                     // byte[] croppedImage = getCroppedImage(originalBytes);
 
-                    // byte[] bytesWithWatermark = insertImageWaterMark(originalBytes, watermarkpath, writePath);
-                    byte[] insertTextWatermarkBytes= insertTextWatermark(originalBytes, "This is the property of Perspectify!!");
+                 //    byte[] bytesWithWatermark = insertImageWaterMark(originalBytes, watermarkpath, writePath);
+                 //   byte[] insertTextWatermarkBytes= insertTextWatermark(originalBytes, "Perspectify!!");
 
 
-                    // byte[] compressedImage = getComprssedImage(bytesWithWatermark);
-                     byte[] compressedImage = getComprssedImage(insertTextWatermarkBytes);
+                     byte[] compressedImage = getComprssedImage(originalBytes,watermarkpath);
+                    // byte[] compressedImage = getComprssedImage(insertTextWatermarkBytes);
 
 
                     // Console.WriteLine(compressedImage);
@@ -89,11 +91,13 @@ namespace Image_Compression.Services
                 // byte[] croppedImage = getCroppedImage(originalBytes);
 
                 // byte[] bytesWithWatermark = insertImageWaterMark(originalBytes, watermarkpath, writePath);
-                byte[] insertTextWatermarkBytes = insertTextWatermark(originalBytes, "This is the property of Perspectify!!");
+             //   byte[] insertTextWatermarkBytes = insertTextWatermark(originalBytes, "This is the property of Perspectify!!");
 
 
                 // byte[] compressedImage = getComprssedImage(bytesWithWatermark);
-                byte[] compressedImage = getComprssedImage(insertTextWatermarkBytes);
+                byte[] compressedImage = getComprssedImage(originalBytes,watermarkpath);
+              //  byte[] insertTextWatermarkBytes = insertTextWatermark(compressedImage, "This is the property of Perspectify!!");
+
 
 
                 // insertImageWaterMark(compressedImage, watermarkpath, writePath);
@@ -113,14 +117,15 @@ namespace Image_Compression.Services
         }
         private byte[] insertTextWatermark(byte[] imageBytes, string watermarkText)
          {
-             Stream stream = new MemoryStream(imageBytes);
+            NetVips.Image img = ByteToImg(imageBytes);
+            Stream stream = new MemoryStream(imageBytes);
              Bitmap bitmap = new Bitmap(stream);
              Bitmap tempBitMap = new Bitmap(bitmap, bitmap.Width, bitmap.Height);
              Graphics graphicsImage = Graphics.FromImage(tempBitMap);
              StringFormat stringformat1 = new StringFormat();
              stringformat1.Alignment = StringAlignment.Far;
-             Color StringColor1 = ColorTranslator.FromHtml("#000000");
-             graphicsImage.DrawString(watermarkText, new Font("arail", 40, FontStyle.Regular), new SolidBrush(StringColor1), new Point(600, 700), stringformat1);
+             Color StringColor1 = ColorTranslator.FromHtml("#FFFFFF");
+             graphicsImage.DrawString(watermarkText, new Font("arail", 40, FontStyle.Regular), new SolidBrush(StringColor1), new Point(img.Width-100,img.Height-400), stringformat1);
             // bitmap.Save(writePath);
             using (var ms = new MemoryStream())
             {
@@ -136,24 +141,34 @@ namespace Image_Compression.Services
             NetVips.Image croppedImage = img.Smartcrop((int)(img.Width * 0.8), (int)(img.Height * 0.8), Interesting.Centre);
             return croppedImage.WriteToMemory();
         }
-        private byte[] getComprssedImage(byte[] originalBytes)
+        private byte[] getComprssedImage(byte[] originalBytes,string watermarkpath)
         {
+            String writePath = "C:\\Users\\richa\\Pictures\\Vips-compress\\" + fileName;
+
             NetVips.Image img = ByteToImg(originalBytes);
-            NetVips.Image croppedImage = img.Smartcrop((int)(img.Width * 0.8), (int)(img.Height * 0.8), Interesting.Centre);
+            NetVips.Image croppedImage = img.Smartcrop((int)(img.Width * 0.9), (int)(img.Height * 0.9), Interesting.Centre);
+            byte[] croppedImageByte = croppedImage.JpegsaveBuffer();
+            byte[] bytesWithWatermark = insertImageWaterMark(croppedImageByte, watermarkpath, writePath);
+            byte[] insertTextWatermarkBytes = insertTextWatermark(bytesWithWatermark, "Perspectify!!");
+
+            NetVips.Image watermarkImage = ByteToImg(insertTextWatermarkBytes);
+
 
             //img.Tiffsave(writePath, compression: ForeignTiffCompression.Jpeg);
 
-            byte[] compressedImage = croppedImage.TiffsaveBuffer(compression: ForeignTiffCompression.Jpeg);
+            byte[] compressedImage = watermarkImage.TiffsaveBuffer(compression: ForeignTiffCompression.Jpeg);
             return compressedImage;
         }
         private byte[] insertImageWaterMark(byte[] compressedImage, string watermarkpath, string writePath)
         {
             byte[] output = null;
+            NetVips.Image img = ByteToImg(compressedImage);
+
             using (var magicimage = new MagickImage(compressedImage))
             {
                 using (var watermark = new MagickImage(watermarkpath))
                 {
-                    magicimage.Composite(watermark, 200, 50, CompositeOperator.Over);
+                    magicimage.Composite(watermark, img.Width-350,img.Height-300, CompositeOperator.Over);
                 }
                 magicimage.Write(writePath);
                 output = magicimage.ToByteArray();
